@@ -267,7 +267,7 @@ class InnoBackup
   end
 
   def hostname
-    return options[:hostname] if options[:hostname]
+    return options['hostname'] if options['hostname']
     require 'socket'
     Socket.gethostbyname(Socket.gethostname).first
   end
