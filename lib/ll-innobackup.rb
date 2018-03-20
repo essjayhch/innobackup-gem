@@ -148,7 +148,8 @@ class InnoBackup
   end
 
   def aws_bucket
-    @aws_bucket = options['aws_bucket'] ||= 'jim-test-mysql-stream1'
+    raise NoStateError, 'aws_bucket not provided' unless options['aws_bucket']
+    @aws_bucket = options['aws_bucket']
   end
 
   def expected_full_size
