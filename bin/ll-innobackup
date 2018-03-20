@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+require 'll-innobackup'
+
+LL::InnoBackup.new(LL::InnoBackup.options).backup
+
