@@ -152,8 +152,17 @@ class InnoBackup
     @aws_bucket = options['aws_bucket']
   end
 
+  def working_directory
+    return options['working_directory'] if options['working_directory']
+    '/tmp'
+  end
+
   def expected_full_size
-    @expected_full_size = options['expected_full_size'] ||= 1_600_000_000
+    @expected_full_size ||= -> do
+      return File.size(working_file) if File.exist?(working_file)
+      return options['expected_full_size'] if options['expected_full_size']
+      1_600_000_000
+    end.call
   end
 
   def sql_authentication
@@ -168,7 +177,8 @@ class InnoBackup
 
   def innobackup_command
     "#{backup_bin} #{sql_authentication} "\
-    "#{incremental} #{innobackup_options} /tmp/sql"
+    "#{incremental} #{innobackup_options} /tmp/sql "\
+    "2> #{innobackup_log} > #{working_file}"
   end
 
   def expires_date
@@ -193,8 +203,9 @@ class InnoBackup
   end
 
   def aws_command
-    "#{aws_bin} s3 cp - s3://#{aws_bucket}/#{aws_backup_file}"\
-    " #{expected_size} #{expires}"
+    "#{aws_bin} s3 cp #{working_file} s3://#{aws_bucket}/#{aws_backup_file} "\
+    "#{expected_size} #{expires} "\
+    "2> #{aws_log} >> #{aws_log}"
   end
 
   def valid_commands?
@@ -203,16 +214,22 @@ class InnoBackup
 
   def backup
     require 'English'
-    exc = "#{innobackup_command} 2> #{innobackup_log} |
-    #{aws_command} 2> #{aws_log} >> #{aws_log}"
-    `#{exc}`if valid_commands?
-    @completed = $CHILD_STATUS == 0
+
+    return unless if valid_commands?
+    `#{innobackup_command}`
+    @completed_inno = $CHILD_STATUS == 0
+    raise Innobackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
+    `#{aws_command}`
+    @completed_aws = $CHILD_STATUS == 0
+    raise Innobackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
     return record if success? && completed?
-    revert_aws if valid_commands?
+  rescue Innobackup::StateError => e
+    revert_aws
   rescue InnoBackup::NoStateError => e
     STDERR.puts e.message
   ensure
     report
+    cleanup
   end
 
   def revert_aws
@@ -272,6 +289,10 @@ class InnoBackup
     Socket.gethostbyname(Socket.gethostname).first
   end
 
+  def working_file
+    @working_file ||= File.join working_directory, "#{now.iso8601}-percona_backup"
+  end
+
   def aws_backup_file
     return "#{hostname}/#{now.iso8601}/percona_full_backup" if type == 'full'
     "#{hostname}/#{Time.parse(state('full')['date']).iso8601}/percona_incremental_#{now.iso8601}"
@@ -280,7 +301,21 @@ class InnoBackup
   end
 
   def completed?
-    @completed == true
+    completed_aws? && completed_inno?
+  end
+
+  def completed_aws?
+    @completed_aws == true
+  end
+
+  def completed_inno?
+    @completed_inno == true
+  end
+
+  def cleanup
+    File.unlink working_file
+  rescue StandardError => e
+    STDERR.puts "Caught exception #{e} when trying to cleanup"
   end
 
   def report
@@ -289,7 +324,9 @@ class InnoBackup
       STDERR.puts "#{$PROGRAM_NAME}: success: completed #{type} backup"
       return
     end
-    STDERR.puts "#{$PROGRAM_NAME}: failed" 
+    STDERR.puts "Unable to run innobackup" unless completed_inno?
+    STDERR.puts "Unable to run aws s3 command" unless completed_aws?
+    STDERR.puts "#{$PROGRAM_NAME}: failed"
     STDERR.puts 'missing binaries' unless valid_commands?
     inno_tail = InnoBackup.tail_file(innobackup_log, 10)
     STDERR.puts 'invalid sql user' if inno_tail =~ /Option user requires an argument/
