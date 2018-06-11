@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'll-innobackup'
-  s.version     = '0.1.1'
+  s.version     = '0.1.16'
   s.summary     = "Livelink Innobackup Script"
   s.description = "A program to conduct innobackup"
   s.authors     = ["Stuart Harland, LiveLink Technology Ltd"]

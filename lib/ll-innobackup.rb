@@ -215,7 +215,7 @@ class InnoBackup
   def backup
     require 'English'
 
-    return unless if valid_commands?
+    return unless valid_commands?
     `#{innobackup_command}`
     @completed_inno = $CHILD_STATUS == 0
     raise Innobackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
