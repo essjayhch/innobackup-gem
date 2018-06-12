@@ -241,7 +241,7 @@ class InnoBackup
     InnoBackup.tail_file(
       innobackup_log,
       1
-    ) =~ /: completed OK/
+    ) =~ / completed OK/
   rescue Errno::ENOENT
     false
   end
