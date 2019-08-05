@@ -105,6 +105,10 @@ class InnoBackup
     false
   end
 
+  def is_encrypted?
+    !options['encryption_key'].empty?
+  end
+
   def can_full_backup?
     !fully_backed_up_today? && lock?('full')
   end
@@ -143,6 +147,10 @@ class InnoBackup
     @sql_backup_password ||= options['sql_backup_password']
   end
 
+  def encryption_key
+    @encryption_key ||= options['encryption_key']
+  end
+
   def aws_bin
     @aws_bin = options['aws_bin'] ||= '/usr/local/bin/aws'
   end
@@ -170,9 +178,12 @@ class InnoBackup
   end
 
   def innobackup_options
-    "--parallel=#{backup_parallel} "\
-    "--compress-threads=#{backup_compress_threads} "\
-    '--stream=xbstream --compress'
+    [
+     "--parallel=#{backup_parallel}",
+     "--compress-threads=#{backup_compress_threads}",
+     ("--encrypt=AES256 --encrypt-key=#{encryption_key}" if is_encrypted?),
+     '--stream=xbstream --compress'
+    ].join(" ")
   end
 
   def innobackup_command
@@ -218,12 +229,12 @@ class InnoBackup
     return unless valid_commands?
     `#{innobackup_command}`
     @completed_inno = $CHILD_STATUS == 0
-    raise Innobackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
+    raise InnoBackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
     `#{aws_command}`
     @completed_aws = $CHILD_STATUS == 0
-    raise Innobackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
+    raise InnoBackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
     return record if success? && completed?
-  rescue Innobackup::StateError => e
+  rescue InnoBackup::StateError => e
     revert_aws
   rescue InnoBackup::NoStateError => e
     STDERR.puts e.message
@@ -339,6 +350,9 @@ class InnoBackup
   end
 
   class NoStateError < StandardError
+  end
+
+  class StateError < StandardError
   end
 end
 end
