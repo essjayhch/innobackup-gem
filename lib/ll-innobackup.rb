@@ -105,6 +105,10 @@ class InnoBackup
     false
   end
 
+  def is_encrypted?
+    !options['encryption_key'].empty?
+  end
+
   def can_full_backup?
     !fully_backed_up_today? && lock?('full')
   end
@@ -143,6 +147,10 @@ class InnoBackup
     @sql_backup_password ||= options['sql_backup_password']
   end
 
+  def encryption_key
+    @encryption_key ||= options['encryption_key']
+  end
+
   def aws_bin
     @aws_bin = options['aws_bin'] ||= '/usr/local/bin/aws'
   end
@@ -170,9 +178,12 @@ class InnoBackup
   end
 
   def innobackup_options
-    "--parallel=#{backup_parallel} "\
-    "--compress-threads=#{backup_compress_threads} "\
-    '--stream=xbstream --compress'
+    [
+     "--parallel=#{backup_parallel}",
+     "--compress-threads=#{backup_compress_threads}",
+     ("-encrypt=AES256 --encrypt-key=#{encryption_key}" if is_encrypted?),
+     '--stream=xbstream --compress'
+    ].join(" ")
   end
 
   def innobackup_command
