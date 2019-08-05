@@ -181,7 +181,7 @@ class InnoBackup
     [
      "--parallel=#{backup_parallel}",
      "--compress-threads=#{backup_compress_threads}",
-     ("-encrypt=AES256 --encrypt-key=#{encryption_key}" if is_encrypted?),
+     ("--encrypt=AES256 --encrypt-key=#{encryption_key}" if is_encrypted?),
      '--stream=xbstream --compress'
     ].join(" ")
   end
