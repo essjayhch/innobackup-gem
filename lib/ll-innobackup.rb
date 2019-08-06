@@ -229,12 +229,12 @@ class InnoBackup
     return unless valid_commands?
     `#{innobackup_command}`
     @completed_inno = $CHILD_STATUS == 0
-    raise Innobackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
+    raise InnoBackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
     `#{aws_command}`
     @completed_aws = $CHILD_STATUS == 0
-    raise Innobackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
+    raise InnoBackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
     return record if success? && completed?
-  rescue Innobackup::StateError => e
+  rescue InnoBackup::StateError => e
     revert_aws
   rescue InnoBackup::NoStateError => e
     STDERR.puts e.message
@@ -350,6 +350,9 @@ class InnoBackup
   end
 
   class NoStateError < StandardError
+  end
+
+  class StateError < StandardError
   end
 end
 end
