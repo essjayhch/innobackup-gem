@@ -139,6 +139,10 @@ class InnoBackup
     @backup_compress_threads = options['backup_compress_threads'] ||= 4
   end
 
+  def encryption_threads
+    @encryption_threads = options['encryption_threads'] ||= 4
+  end
+
   def sql_backup_user
     @sql_backup_user ||= options['sql_backup_user']
   end
@@ -181,7 +185,7 @@ class InnoBackup
     [
      "--parallel=#{backup_parallel}",
      "--compress-threads=#{backup_compress_threads}",
-     ("--encrypt=AES256 --encrypt-key=#{encryption_key}" if is_encrypted?),
+     ("--encrypt=AES256 --encrypt-key=#{encryption_key} --encrypt-threads=#{encryption_threads}" if is_encrypted?),
      '--stream=xbstream --compress'
     ].join(" ")
   end
