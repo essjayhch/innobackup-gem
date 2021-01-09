@@ -230,12 +230,6 @@ class InnoBackup
     return false
   end
 
-  def aws_command
-    "#{aws_bin} s3 cp #{working_file} s3://#{aws_bucket}/#{aws_backup_file} "\
-    "#{expected_size} #{expires} "\
-    "2> #{aws_log} >> #{aws_log}"
-  end
-
   def valid_commands?
     File.exist?(backup_bin) && File.exist?(aws_bin)
   end
