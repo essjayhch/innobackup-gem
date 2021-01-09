@@ -1,5 +1,6 @@
 require 'json'
 require 'date'
+require 'aws-sdk-s3'
 
 # Run Inmental or Full backups on MySQL
 module LL
@@ -62,7 +63,8 @@ class InnoBackup
               :date,
               :state_files,
               :lock_files,
-              :options
+              :options,
+              :s3
 
   def initialize(options = {})
     @now = Time.now
@@ -71,6 +73,7 @@ class InnoBackup
     @lock_files = {}
     @state_files = {}
     @type = backup_type
+    @s3 = Aws::S3::Resource.new(region: 'eu-west-1')
   end
 
   def aws_log
@@ -217,6 +220,16 @@ class InnoBackup
     "--expected-size=#{expected_full_size}" if type == 'full'
   end
 
+  def s3object_uploaded?(bucket_name, object_key, file_path)
+    object = @s3.bucket(bucket_name).object(object_key)
+      object.upload_file(file_path, {expires: expires_date, thread_count: @options['thread_count']}) do |r|
+        return true
+      end
+  rescue StandardError => e
+    STDERR.puts "Error uploading object: #{e.message}"
+    return false
+  end
+
   def aws_command
     "#{aws_bin} s3 cp #{working_file} s3://#{aws_bucket}/#{aws_backup_file} "\
     "#{expected_size} #{expires} "\
@@ -234,8 +247,7 @@ class InnoBackup
     `#{innobackup_command}`
     @completed_inno = $CHILD_STATUS == 0
     raise InnoBackup::StateError, 'Unable to run innobackup correctly' unless @completed_inno
-    `#{aws_command}`
-    @completed_aws = $CHILD_STATUS == 0
+    @completed_aws = s3object_uploaded?(aws_bucket, aws_backup_file, working_file)
     raise InnoBackup::StateError, 'Unable to run aws upload correctly' unless @completed_aws
     return record if success? && completed?
   rescue InnoBackup::StateError => e
