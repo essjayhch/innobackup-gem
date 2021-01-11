@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'll-innobackup'
-  s.version     = '0.1.21'
+  s.version     = '0.1.22'
   s.summary     = "Livelink Innobackup Script"
   s.description = "A program to conduct innobackup"
   s.authors     = ["Stuart Harland, LiveLink Technology Ltd"]
@@ -11,4 +11,5 @@ Gem::Specification.new do |s|
   s.license       = 'MIT'
   s.executables << 'll-innobackup'
   s.add_dependency 'activesupport', '= 4.2.6'
+  s.add_dependency 'aws-sdk-s3', '~> 1'
 end
