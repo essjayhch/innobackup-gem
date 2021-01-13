@@ -73,7 +73,7 @@ class InnoBackup
     @lock_files = {}
     @state_files = {}
     @type = backup_type
-    @s3 = Aws::S3::Resource.new(region: 'eu-west-1')
+    @s3 = Aws::S3::Resource.new()
   end
 
   def aws_log
