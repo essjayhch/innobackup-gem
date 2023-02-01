@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.license       = 'MIT'
   s.executables << 'll-innobackup'
 
-  s.add_dependency 'activesupport', '= 4.2.6'
+  s.add_dependency 'activesupport', '= 7.0.4.2'
   s.add_dependency 'aws-sdk-s3',    '~> 1'
   s.add_dependency 'minitest',      '5.12.0'
 end
